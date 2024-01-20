@@ -1,35 +1,74 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect, useRef } from "react";
+import QRCode from "react-qr-code";
+import io from "socket.io-client"
 
-function App() {
-  const [count, setCount] = useState(0)
+
+let socket = io('http://localhost:3000', { transports: ['websocket', 'polling', 'flashsocket'] });
+
+
+export default function App() {
+
+  const [qrCode, setQrCode] = useState("");
+  const [disable, setDisable] = useState(false)
+  const toastId = useRef(null);
+
+
+  socket.on("qr", (data) => {
+    const { qr } = data;
+    console.log("QR RECEIVED", qr);
+    setQrCode(qr)
+  });
+
+  socket.on("ready", () => {
+    console.log('All Set, wait for LAST NOTIFICATION!')
+  })
+
+  socket.on("groupConnected", (groupId) => {
+    setTimeout(() => {
+      console.log(groupId)
+      console.log('Group is connected too')
+    }, 3000)
+
+  })
+
+
+
+  const handleSubmit = () => {
+    setDisable(true)
+    console.log('trying to connect')
+    socket.emit("createSession", () => {
+      console.log("rendering")
+    }
+    )
+
+  }
+
 
   return (
+
+
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+
+      {!qrCode ? (
+        <div><p>Loading</p></div>
+      ) : (
+        <QRCode value={qrCode} className="" />
+      )
+      }
+
+      {
+        !disable ? (
+          <button
+            onClick={handleSubmit}></button>
+        ) : (
+          <button onClick={handleSubmit}>
+            Click to get QRCode
+          </button >
+        )
+      }
+
+
     </>
+
   )
 }
-
-export default App
